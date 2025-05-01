@@ -14,26 +14,37 @@ def get_model(model_name):
     with open(path, 'rb') as f:
         return pickle.load(f)
 
-rf = get_model('rf') 
+lr = get_model('lr') 
 
-# get feature names from random forest model
-feature_cols = rf.feature_names_in_
+# get feature names from logistic regression model
+feature_cols = lr.feature_names_in_
 
-val_transform = torch.load('models/val_transform.pth', weights_only=False, map_location=torch.device('cpu'))
-cnn = CNN(num_classes=len(CLASSES))
-cnn.load_state_dict(torch.load('models/cnn.pth', weights_only=False, map_location=torch.device('cpu')))
-cnn = cnn.to('cpu')
-cnn.eval()
+# if the file exists, load the validation transform
+if os.path.exists('models/val_transform.pth'):
+    val_transform = torch.load('models/val_transform.pth', weights_only=False, map_location=torch.device('cpu'))
+else:
+    val_transform = None
 
-VIT_MODEL_NAME = 'vit_tiny_patch16_224'
+if os.path.exists('models/cnn.pth'):
+    cnn = CNN(num_classes=len(CLASSES))
+    cnn.load_state_dict(torch.load('models/cnn.pth', weights_only=False, map_location=torch.device('cpu')))
+    cnn = cnn.to('cpu')
+    cnn.eval()
+else:
+    cnn = None
 
-vit = timm.create_model(
-    VIT_MODEL_NAME,
-    pretrained=True,
-    num_classes=len(CLASSES)
-).to('cpu')
-vit.load_state_dict(torch.load('models/vit.pth', weights_only=False, map_location=torch.device('cpu')))
-vit.eval()
+if os.path.exists('models/vit.pth'):
+    VIT_MODEL_NAME = 'vit_tiny_patch16_224'
+
+    vit = timm.create_model(
+        VIT_MODEL_NAME,
+        pretrained=True,
+        num_classes=len(CLASSES)
+    ).to('cpu')
+    vit.load_state_dict(torch.load('models/vit.pth', weights_only=False, map_location=torch.device('cpu')))
+    vit.eval()
+else:
+    vit = None
 
 # separate function for neural nets
 def predict_dl(audio_path, model_name):
@@ -53,7 +64,11 @@ def predict_dl(audio_path, model_name):
 
 def predict(model_name, X):
     X = X[feature_cols]
-    model = get_model(model_name)
+    try:
+        model = get_model(model_name)
+    except FileNotFoundError:
+        return 'Model not found'
+    
     if model_name == 'lgb':
         idx = model.predict(X).argmax(axis=1)[0]
         return CLASSES[idx]
@@ -70,4 +85,4 @@ def predict(model_name, X):
 if __name__ == '__main__':
     # sample prediction using LGBM model
     X = extract_features_as_df('data/test/ANG/1011_IEO_ANG_LO.mp3')
-    print(predict('lgb', X))
+    print(predict('lr', X))
