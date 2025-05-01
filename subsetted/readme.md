@@ -27,9 +27,7 @@ A subset of the data has been provided in this repository; therefore, it is not 
 python3 src/scripts/data.py
 ```
 
-
-*This step is also optional as the features have been provided in the repository --*
-To extract features and spectograms, run
+To extract features and spectograms, from the root directory, run
 
 ```
 python3 src/scripts/feature_extraction.py
